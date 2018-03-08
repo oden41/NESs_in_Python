@@ -1,11 +1,8 @@
 import numpy as np
 import random as rand
 import experiments.experiment as ex
+import methos.dx_nes
 
 if __name__ == '__main__':
-    dimension = 40
-    exp = ex.Sphere(dimension=dimension)
-
-    vec = np.random.rand(dimension)
-    print(vec)
-    print(exp.f(vec))
+    opt = methos.dx_nes.DX_NES(20, lambda x : np.linalg.norm(x), 8, 3, 2)
+    opt.do_oneiteration()
