@@ -14,6 +14,8 @@ class DX_NES():
         self.B = np.eye(dim)
         self.alpha = self.calc_alpha(dim, lam)
         self.population = []
+        self.eval_count = 0
+        self.best_eval = float('inf')
 
     def sample_population(self):
         self.population.clear()
@@ -25,6 +27,7 @@ class DX_NES():
             x2 = self.m + self.sigma * np.dot(self.B, z2)
             append((x, z, self.func(x)))
             append((x2, z2, self.func(x2)))
+        self.eval_count = self.eval_count + self.lam
 
     def calc_alpha(self, dim, lam):
         alpha = 1
@@ -48,6 +51,7 @@ class DX_NES():
         wz = np.sum([w_rank[i] * z[i] for i in range(self.lam)], axis=0)
         self.P_sigma = (1 - c_sigma) * self.P_sigma + np.sqrt(c_sigma * (2 - c_sigma) * mu_eff) * wz
 
+        eta_m = 1.0
         norm_P = np.linalg.norm(self.P_sigma)
         if norm_P >= self.eps:
             w = w_dist
@@ -66,6 +70,17 @@ class DX_NES():
             eta_B = np.tanh(self.lam / (2 * (self.dim ** 2 + 6 * self.dim)))
 
         G_delta = np.sum([w[i] * z[i] for i in range(self.lam)], axis=0)
-        G_M = np.sum(np.array([w[i] * (np.dot(np.array([z[i]]).T, np.array([z[i]])) - np.eye(len(z[i]))) for i in range(self.lam)]), axis=0)
-        G_sigma = np.trace(G_M)/self.dim
+        G_M = np.sum(np.array(
+            [w[i] * (np.dot(np.array([z[i]]).T, np.array([z[i]])) - np.eye(len(z[i]))) for i in range(self.lam)]),
+                     axis=0)
+        G_sigma = np.trace(G_M) / self.dim
         G_B = G_M - G_sigma * np.eye(self.dim)
+        self.m = self.m + eta_m * self.sigma * np.dot(self.B, G_delta)
+        self.sigma = self.sigma * np.exp(eta_sigma * G_sigma / 2)
+        self.B = self.B * np.exp(eta_B * G_B / 2)
+        self.get_besteval()
+
+    def get_besteval(self):
+        self.population.sort(key=(lambda p: p[2]))
+        self.best_eval = self.population[0][2]
+        return self.best_eval
