@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.linalg import expm
 
 
 class DX_NES():
@@ -41,7 +42,9 @@ class DX_NES():
     def do_oneiteration(self):
         self.sample_population()
         self.population.sort(key=(lambda p: p[2]))
-        w_rank = np.array([np.maximum(0, np.log(self.lam / 2 + 1) - np.log(i + 1)) for i in range(self.lam)])
+        _w_rank = np.array([np.maximum(0, np.log(self.lam / 2 + 1) - np.log(i + 1)) for i in range(self.lam)])
+        w_rank_sum = np.sum(_w_rank)
+        w_rank = _w_rank / w_rank_sum - 1/ self.lam
         _w_dist = np.array([np.exp(self.alpha * np.linalg.norm(p[1])) for p in self.population])
         w_sum = np.dot(w_rank, _w_dist)
         w_dist = np.array([_w_dist[i] * w_rank[i] / w_sum - 1 / self.lam for i in range(self.lam)])
@@ -72,12 +75,12 @@ class DX_NES():
         G_delta = np.sum([w[i] * z[i] for i in range(self.lam)], axis=0)
         G_M = np.sum(np.array(
             [w[i] * (np.dot(np.array([z[i]]).T, np.array([z[i]])) - np.eye(len(z[i]))) for i in range(self.lam)]),
-                     axis=0)
+            axis=0)
         G_sigma = np.trace(G_M) / self.dim
         G_B = G_M - G_sigma * np.eye(self.dim)
         self.m = self.m + eta_m * self.sigma * np.dot(self.B, G_delta)
         self.sigma = self.sigma * np.exp(eta_sigma * G_sigma / 2)
-        self.B = self.B * np.exp(eta_B * G_B / 2)
+        self.B = np.dot(self.B, expm(eta_B * G_B / 2))
         self.get_besteval()
 
     def get_besteval(self):
